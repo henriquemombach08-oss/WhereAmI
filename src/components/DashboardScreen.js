@@ -67,7 +67,7 @@ export default function DashboardScreen({
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerSection}>
-          <Text style={styles.overline}>Vis\u00E3o Geral</Text>
+          <Text style={styles.overline}>{'Visão Geral'}</Text>
           <Text style={styles.title}>Alarmes de Proximidade</Text>
         </View>
 
@@ -133,7 +133,7 @@ export default function DashboardScreen({
                   <Text style={[styles.badgeText, { color: theme.colors.secondary }]}>ATIVO</Text>
                 </View>
               </View>
-              <Text style={styles.cardTitle}>Hor\u00E1rio fixo</Text>
+              <Text style={styles.cardTitle}>{'Horário fixo'}</Text>
               <View style={styles.locationRow}>
                 <MapIcon color={theme.colors.onBackground} size={14} />
                 <Text style={styles.locationText} numberOfLines={1}>
@@ -144,7 +144,7 @@ export default function DashboardScreen({
               <View style={styles.radiusBox}>
                 <View>
                   <Text style={styles.radiusLabel}>MODO</Text>
-                  <Text style={styles.radiusValue}>Alarme por hor\u00E1rio</Text>
+                  <Text style={styles.radiusValue}>{'Alarme por horário'}</Text>
                 </View>
               </View>
             </View>

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Switch, FlatList } from 'react-native';
+import { StyleSheet, View, Text, Switch, FlatList, TouchableOpacity } from 'react-native';
 import { User, Moon, Sun, MapPin } from 'lucide-react-native';
 import { getFavoritesLocal } from '../services/supabase';
 
-export default function ProfileScreen({ theme, isDarkMode, toggleTheme }) {
+export default function ProfileScreen({ theme, isDarkMode, isVisible, onSelectFavorite, toggleTheme }) {
   const styles = getStyles(theme);
   const [favorites, setFavorites] = useState([]);
 
   useEffect(() => {
-    loadFavorites();
-  }, []);
+    if (isVisible) {
+      void loadFavorites();
+    }
+  }, [isVisible]);
 
   const loadFavorites = async () => {
     const favs = await getFavoritesLocal();
@@ -35,7 +37,7 @@ export default function ProfileScreen({ theme, isDarkMode, toggleTheme }) {
           </View>
           <View style={styles.cardTextContent}>
             <Text style={styles.cardTitle}>Modo Escuro</Text>
-            <Text style={styles.cardDesc}>Alterar apar\u00EAncia do aplicativo</Text>
+            <Text style={styles.cardDesc}>{'Alterar aparência do aplicativo'}</Text>
           </View>
           <Switch
             trackColor={{ false: theme.colors.outlineVariant, true: theme.colors.primary }}
@@ -47,16 +49,21 @@ export default function ProfileScreen({ theme, isDarkMode, toggleTheme }) {
       </View>
 
       <View style={[styles.card, { flex: 1, alignItems: 'stretch' }]}>
-        <Text style={[styles.cardTitle, { marginBottom: 16 }]}>Locais Salvos</Text>
+        <View style={styles.favoritesHeader}>
+          <Text style={styles.cardTitle}>Locais Salvos</Text>
+          <TouchableOpacity onPress={() => void loadFavorites()}>
+            <Text style={styles.refreshText}>Atualizar</Text>
+          </TouchableOpacity>
+        </View>
 
         {favorites.length === 0 ? (
-          <Text style={styles.cardDesc}>Voc\u00EA pode salvar endere\u00E7os para usar como \u00E2ncoras r\u00E1pidas.</Text>
+          <Text style={styles.cardDesc}>{'Você pode salvar endereços para usar como âncoras rápidas.'}</Text>
         ) : (
           <FlatList
             data={favorites}
-            keyExtractor={(item, index) => index.toString()}
+            keyExtractor={(item) => item.id ?? `${item.latitude}-${item.longitude}-${item.radius}`}
             renderItem={({ item }) => (
-              <View style={styles.favItem}>
+              <TouchableOpacity style={styles.favItem} onPress={() => onSelectFavorite?.(item)}>
                 <MapPin color={theme.colors.primary} size={20} />
                 <View style={styles.favTextContainer}>
                   <Text style={styles.favTitle}>{item.name}</Text>
@@ -64,7 +71,8 @@ export default function ProfileScreen({ theme, isDarkMode, toggleTheme }) {
                     Raio: {item.radius}m
                   </Text>
                 </View>
-              </View>
+                <Text style={styles.useText}>Usar</Text>
+              </TouchableOpacity>
             )}
           />
         )}
@@ -143,6 +151,18 @@ const getStyles = (theme) =>
       marginTop: 2,
       textAlign: 'center',
     },
+    favoritesHeader: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+    },
+    refreshText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
     favItem: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -163,5 +183,10 @@ const getStyles = (theme) =>
       fontSize: 12,
       color: theme.colors.outlineVariant,
       marginTop: 2,
+    },
+    useText: {
+      color: theme.colors.primary,
+      fontSize: 13,
+      fontWeight: '700',
     },
   });

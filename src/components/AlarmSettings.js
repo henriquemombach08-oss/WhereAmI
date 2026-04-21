@@ -41,7 +41,7 @@ export default function AlarmSettings({
       return;
     }
 
-    Alert.alert('Erro', 'N\u00E3o foi poss\u00EDvel salvar o favorito. Verifique a configura\u00E7\u00E3o do Supabase.');
+    Alert.alert('Erro', 'Não foi possível salvar o favorito. Verifique a configuração do Supabase.');
   };
 
   const onChangeTime = (event, selectedDate) => {
@@ -60,7 +60,7 @@ export default function AlarmSettings({
   return (
     <View style={styles.container}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Text style={styles.title}>Par\u00E2metros do Alerta</Text>
+        <Text style={styles.title}>{'Parâmetros do Alerta'}</Text>
         <TouchableOpacity style={styles.favBtn} onPress={handleSaveFavorite}>
           <Heart color={theme.colors.secondary} size={20} />
         </TouchableOpacity>
@@ -110,7 +110,7 @@ export default function AlarmSettings({
             <Clock color={isTimeActive ? theme.colors.secondary : theme.colors.onBackground} size={24} />
           </View>
           <View style={styles.cardTextContent}>
-            <Text style={styles.cardTitle}>Hor\u00E1rio Fixo</Text>
+            <Text style={styles.cardTitle}>{'Horário Fixo'}</Text>
             <Text style={styles.cardDesc}>Tocar em momento exato</Text>
           </View>
           <Switch
@@ -124,7 +124,7 @@ export default function AlarmSettings({
 
         {isTimeActive && (
           <View style={styles.cardBody}>
-            <Text style={styles.label}>HOR\u00C1RIO PREVISTO</Text>
+            <Text style={styles.label}>{'HORÁRIO PREVISTO'}</Text>
             <TouchableOpacity style={styles.timeButton} onPress={() => !isActive && setShowTimePicker(true)}>
               <Text style={styles.timeButtonText}>{formatTime(alarmTime)}</Text>
             </TouchableOpacity>

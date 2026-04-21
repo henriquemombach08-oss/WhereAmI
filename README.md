@@ -62,6 +62,12 @@ node setup_db.js
 
 `setup_db.js` expects `SUPABASE_DB_URL` in `.env` or the current shell environment.
 
+Current policy model:
+
+- anonymous read/insert is still enabled so the app works without auth
+- table constraints now validate `name`, coordinates, and radius
+- proper per-user privacy should be added when authentication is implemented
+
 ## Validation
 
 Basic project validation used here:

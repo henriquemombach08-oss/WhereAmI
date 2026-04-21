@@ -1,60 +1,106 @@
-import React, { useState } from 'react';
-import { Alert, StyleSheet, View, Text, TextInput, TouchableOpacity, Keyboard, ScrollView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, View, Text, TextInput, TouchableOpacity, Keyboard, ScrollView } from 'react-native';
 import MapView, { Marker, Circle } from 'react-native-maps';
 import { Search, MapPin } from 'lucide-react-native';
+import { searchAddresses } from '../services/addressSearch';
+
+const MIN_QUERY_LENGTH = 3;
 
 export default function MapScreen({ location, target, setTarget, radius, theme }) {
   const styles = getStyles(theme);
   const [address, setAddress] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
-  const mapRef = React.useRef(null);
+  const [hasSearched, setHasSearched] = useState(false);
+  const mapRef = useRef(null);
+  const requestRef = useRef(0);
+  const skipNextAutoSearchRef = useRef(false);
 
-  const handleSearch = async () => {
-    if (!address.trim()) return;
+  const runSearch = async (query, options = {}) => {
+    const { showNoResultsAlert = false, includeFallback = false } = options;
+    const trimmedQuery = query.trim();
+
+    if (trimmedQuery.length < MIN_QUERY_LENGTH) {
+      setSearchResults([]);
+      setHasSearched(false);
+      setIsSearching(false);
+      return;
+    }
+
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
     setIsSearching(true);
-    setSearchResults([]);
-    Keyboard.dismiss();
+    setHasSearched(true);
 
     try {
-      let url = `https://photon.komoot.io/api/?q=${encodeURIComponent(address)}&limit=6`;
+      const results = await searchAddresses(trimmedQuery, location?.coords ?? null, { includeFallback });
 
-      // Se tiver a localiza\u00E7\u00E3o do usu\u00E1rio, prioriza os resultados pr\u00F3ximos.
-      if (location && location.coords) {
-        const { latitude, longitude } = location.coords;
-        url += `&lat=${latitude}&lon=${longitude}`;
+      if (requestRef.current !== requestId) {
+        return;
       }
 
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data && data.features && data.features.length > 0) {
-        setSearchResults(data.features);
-      } else {
-        Alert.alert('Busca sem resultados', 'Nenhum local encontrado. Tente usar palavras-chave mais comuns.');
+      setSearchResults(results);
+      if (!results.length && showNoResultsAlert) {
+        Alert.alert('Busca sem resultados', 'Nenhum local encontrado. Tente informar mais detalhes do endereço.');
       }
-    } catch (e) {
-        Alert.alert('Erro', 'N\u00E3o foi poss\u00EDvel buscar o endere\u00E7o. Verifique sua conex\u00E3o.');
+    } catch (error) {
+      if (requestRef.current !== requestId) {
+        return;
+      }
+
+      if (showNoResultsAlert) {
+        Alert.alert('Erro', 'Não foi possível buscar o endereço. Verifique sua conexão.');
+      }
     } finally {
-      setIsSearching(false);
+      if (requestRef.current === requestId) {
+        setIsSearching(false);
+      }
     }
   };
 
-  const handleSelectResult = (item) => {
-    const lon = item.geometry.coordinates[0];
-    const lat = item.geometry.coordinates[1];
+  const handleSearch = async () => {
+    Keyboard.dismiss();
+    await runSearch(address, { showNoResultsAlert: true, includeFallback: true });
+  };
 
-    setTarget({ latitude: lat, longitude: lon });
+  const handleSelectResult = (item) => {
+    skipNextAutoSearchRef.current = true;
+    setTarget({ latitude: item.latitude, longitude: item.longitude });
     setSearchResults([]);
-    setAddress('');
+    setHasSearched(false);
+    setAddress(item.displayName);
+    Keyboard.dismiss();
 
     mapRef.current?.animateToRegion({
-      latitude: lat,
-      longitude: lon,
+      latitude: item.latitude,
+      longitude: item.longitude,
       latitudeDelta: 0.05,
       longitudeDelta: 0.05,
     });
   };
+
+  useEffect(() => {
+    const trimmedQuery = address.trim();
+
+    if (skipNextAutoSearchRef.current) {
+      skipNextAutoSearchRef.current = false;
+      return undefined;
+    }
+
+    if (trimmedQuery.length < MIN_QUERY_LENGTH) {
+      requestRef.current += 1;
+      setSearchResults([]);
+      setHasSearched(false);
+      setIsSearching(false);
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      void runSearch(trimmedQuery, { includeFallback: /\b\d+[A-Za-z]?\b/.test(trimmedQuery) });
+    }, 350);
+
+    return () => clearTimeout(timeoutId);
+  }, [address, location?.coords?.latitude, location?.coords?.longitude]);
 
   return (
     <View style={styles.container}>
@@ -62,12 +108,15 @@ export default function MapScreen({ location, target, setTarget, radius, theme }
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Digite um endere\u00E7o..."
+            placeholder={'Digite um endereço...'}
             placeholderTextColor={theme.colors.outlineVariant}
             value={address}
             onChangeText={(text) => {
               setAddress(text);
-              if (text.length === 0) setSearchResults([]);
+              if (text.length === 0) {
+                setSearchResults([]);
+                setHasSearched(false);
+              }
             }}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
@@ -77,24 +126,43 @@ export default function MapScreen({ location, target, setTarget, radius, theme }
           </TouchableOpacity>
         </View>
 
-        {searchResults.length > 0 && (
+        {(isSearching || searchResults.length > 0 || (hasSearched && address.trim().length >= MIN_QUERY_LENGTH)) && (
           <View style={styles.resultsContainer}>
             <ScrollView style={styles.resultsScroll} keyboardShouldPersistTaps="handled">
-              {searchResults.map((item, index) => {
-                const name = item.properties.name || '';
-                const street = item.properties.street || '';
-                const city = item.properties.city || item.properties.state || '';
-                const displayName = [name, street, city].filter(Boolean).join(', ');
-
-                return (
-                  <TouchableOpacity key={index} style={styles.resultItem} onPress={() => handleSelectResult(item)}>
-                    <MapPin color={theme.colors.primary} size={16} style={{ marginTop: 3 }} />
-                    <Text style={styles.resultText} numberOfLines={2}>
-                      {displayName || 'Local desconhecido'}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+              {isSearching ? (
+                <View style={styles.searchState}>
+                  <ActivityIndicator color={theme.colors.primary} />
+                  <Text style={styles.searchStateText}>{'Buscando endereços próximos...'}</Text>
+                </View>
+              ) : searchResults.length > 0 ? (
+                <>
+                  <Text style={styles.resultsHint}>
+                    {'Resultados ordenados por texto parecido, número e proximidade da sua localização.'}
+                  </Text>
+                  {searchResults.map((item) => (
+                    <TouchableOpacity key={item.id} style={styles.resultItem} onPress={() => handleSelectResult(item)}>
+                      <MapPin color={theme.colors.primary} size={16} style={{ marginTop: 3 }} />
+                      <View style={styles.resultCopy}>
+                        <Text style={styles.resultText} numberOfLines={1}>
+                          {item.primaryText}
+                        </Text>
+                        {!!item.secondaryText && (
+                          <Text style={styles.resultSubtext} numberOfLines={2}>
+                            {item.secondaryText}
+                          </Text>
+                        )}
+                      </View>
+                      {!!item.distanceLabel && <Text style={styles.distanceText}>{item.distanceLabel}</Text>}
+                    </TouchableOpacity>
+                  ))}
+                </>
+              ) : (
+                <View style={styles.searchState}>
+                  <Text style={styles.searchStateText}>
+                    {'Nenhuma sugestão ainda. Tente digitar rua, número, bairro ou cidade.'}
+                  </Text>
+                </View>
+              )}
             </ScrollView>
           </View>
         )}
@@ -196,7 +264,7 @@ const getStyles = (theme) =>
       borderRadius: theme.borderRadius.lg,
       borderWidth: 1,
       borderColor: theme.colors.outlineVariant,
-      maxHeight: 200,
+      maxHeight: 240,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.1,
@@ -206,6 +274,12 @@ const getStyles = (theme) =>
     resultsScroll: {
       paddingVertical: 8,
     },
+    resultsHint: {
+      color: theme.colors.outlineVariant,
+      fontSize: 12,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+    },
     resultItem: {
       flexDirection: 'row',
       alignItems: 'flex-start',
@@ -214,11 +288,37 @@ const getStyles = (theme) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.outlineVariant + '40',
     },
+    resultCopy: {
+      flex: 1,
+      marginLeft: 12,
+    },
     resultText: {
       color: theme.colors.onBackground,
       fontSize: 14,
+      fontWeight: '600',
+    },
+    resultSubtext: {
+      color: theme.colors.outlineVariant,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    distanceText: {
+      color: theme.colors.primary,
+      fontSize: 12,
+      fontWeight: '700',
       marginLeft: 12,
-      flex: 1,
+      marginTop: 1,
+    },
+    searchState: {
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      alignItems: 'center',
+      gap: 8,
+    },
+    searchStateText: {
+      color: theme.colors.outlineVariant,
+      fontSize: 13,
+      textAlign: 'center',
     },
     instructionBox: {
       position: 'absolute',

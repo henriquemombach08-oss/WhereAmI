@@ -94,7 +94,22 @@ export default function App() {
           </View>
         );
       case 'profile':
-        return <ProfileScreen theme={theme} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />;
+        return (
+          <ProfileScreen
+            isDarkMode={isDarkMode}
+            isVisible={activeTab === 'profile'}
+            onSelectFavorite={(favorite) => {
+              setTarget({
+                latitude: favorite.latitude,
+                longitude: favorite.longitude,
+              });
+              setRadius(favorite.radius);
+              setActiveTab('explore');
+            }}
+            theme={theme}
+            toggleTheme={toggleTheme}
+          />
+        );
       default:
         return null;
     }
@@ -183,7 +198,7 @@ const getStyles = (theme) =>
       paddingVertical: 12,
       borderRadius: 24,
     },
-    fabSecondaryText: { color: theme.colors.onPrimary, fontWeight: '700', fontSize: 16 },
+    fabSecondaryText: { color: theme.colors.onPrimaryContainer, fontWeight: '700', fontSize: 16 },
     bottomNav: {
       position: 'absolute',
       bottom: 0,
