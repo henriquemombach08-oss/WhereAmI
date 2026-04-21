@@ -22,6 +22,7 @@ export default function useAlarmController() {
   const [alarmTime, setAlarmTime] = useState(null);
   const [isActive, setIsActive] = useState(false);
   const timeCheckerRef = useRef(null);
+  const debugStopRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -51,6 +52,10 @@ export default function useAlarmController() {
       if (timeCheckerRef.current) {
         clearInterval(timeCheckerRef.current);
         timeCheckerRef.current = null;
+      }
+      if (debugStopRef.current) {
+        clearTimeout(debugStopRef.current);
+        debugStopRef.current = null;
       }
       void AlarmEngine.stopAlarm();
       setAlarmConfig(null);
@@ -108,6 +113,10 @@ export default function useAlarmController() {
       clearInterval(timeCheckerRef.current);
       timeCheckerRef.current = null;
     }
+    if (debugStopRef.current) {
+      clearTimeout(debugStopRef.current);
+      debugStopRef.current = null;
+    }
 
     if (isTimeActive && alarmTime) {
       timeCheckerRef.current = setInterval(() => {
@@ -123,6 +132,23 @@ export default function useAlarmController() {
     return ALARM_START_RESULT.STARTED;
   };
 
+  const testAlarm = async () => {
+    if (debugStopRef.current) {
+      clearTimeout(debugStopRef.current);
+      debugStopRef.current = null;
+    }
+
+    await AlarmEngine.startAlarm([300, 200, 300, 200, 600]);
+    setIsActive(true);
+
+    debugStopRef.current = setTimeout(() => {
+      debugStopRef.current = null;
+      void stopAlarm();
+    }, 6000);
+
+    return ALARM_START_RESULT.STARTED;
+  };
+
   const stopAlarm = async () => {
     setIsActive(false);
     await AlarmEngine.stopAlarm();
@@ -130,6 +156,10 @@ export default function useAlarmController() {
     if (timeCheckerRef.current) {
       clearInterval(timeCheckerRef.current);
       timeCheckerRef.current = null;
+    }
+    if (debugStopRef.current) {
+      clearTimeout(debugStopRef.current);
+      debugStopRef.current = null;
     }
 
     setAlarmConfig(null);
@@ -151,6 +181,7 @@ export default function useAlarmController() {
     setIsTimeActive,
     setRadius,
     setTarget,
+    testAlarm,
     startAlarm,
     stopAlarm,
     target,

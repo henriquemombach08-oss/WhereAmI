@@ -15,6 +15,7 @@ export default function AlarmSettings({
   setIsTimeActive,
   onStart,
   onStop,
+  onTestAlarm,
   isActive,
   target,
   theme,
@@ -143,6 +144,10 @@ export default function AlarmSettings({
       )}
 
       <View style={styles.actions}>
+        <TouchableOpacity style={[styles.btn, styles.btnGhost]} onPress={() => void onTestAlarm()}>
+          <Text style={styles.btnGhostText}>Testar alarme agora</Text>
+        </TouchableOpacity>
+
         {isActive ? (
           <TouchableOpacity style={[styles.btn, styles.btnDanger]} onPress={onStop}>
             <Text style={styles.btnText}>Pausar Monitoramento</Text>
@@ -271,8 +276,19 @@ const getStyles = (theme) =>
     btnDanger: {
       backgroundColor: '#ba1a1a',
     },
+    btnGhost: {
+      backgroundColor: theme.colors.surfaceContainerHighest,
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant,
+      marginBottom: 12,
+    },
     btnText: {
       color: theme.colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    btnGhostText: {
+      color: theme.colors.onBackground,
       fontSize: 16,
       fontWeight: '700',
     },

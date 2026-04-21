@@ -28,6 +28,7 @@ export default function App() {
     setTarget,
     startAlarm,
     stopAlarm,
+    testAlarm,
     target,
   } = useAlarmController();
 
@@ -87,6 +88,7 @@ export default function App() {
               isActive={isActive}
               onStart={handleStartAlarm}
               onStop={stopAlarm}
+              onTestAlarm={testAlarm}
               target={target}
               theme={theme}
               isDarkMode={isDarkMode}
